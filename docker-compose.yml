@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: outboxdb
+    command: ["postgres", "-c", "wal_level=logical"]
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["/bin/app"]
+    environment:
+      - DB_HOST=postgres
+      - PORT=8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+
+  relay:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["/bin/relay"]
+    environment:
+      - DB_HOST=postgres
+    depends_on:
+      - postgres
